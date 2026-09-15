@@ -1,0 +1,67 @@
+# Same as cf_inpainting_ani2vis_vismem_align.yaml, but at 384x384 resolution with the 384px-retrained TBPTT classifier.
+task_name: counterfactual_inpainting_femoral
+
+seed: 777
+deterministic: false   # deterministic algos make the bilinear/upsample kernels fall back to slow, memory-hungry paths
+sample_interval: 20
+
+epoch_steps: 200        # short epochs (~6min @384px) -> frequent validation instead of one 45min epoch
+n_epochs: 6              # 6 x 200 = 1200 train steps total
+logging_dir: ./training_logs/femoral
+experiment_name: ani2vis_vismem36_align_tgru_ema99_seq12_384px
+n_vis_windows: 6
+
+dataset:
+  kind: femoral
+  root_dir: /home/doheon114/doheon114/meme_femoral/TinyUSFM/data/Cls/femoral
+  seq: 12                 # classifier was trained on 12-frame windows
+  train_stride: 6
+  context: 36             # past frames fed to the visible-frame memory (multiple of seq); covers ~83% val / 77% test ANI frames' last VIS frame
+  batch_size: 1           # 384px activations are ~3x the 224px footprint; start conservative to avoid OOM
+  val_batch_size: 2
+  img_size: [384, 384]
+  num_workers: 8
+  hflip: true
+
+model:
+  kind: inpainting_counterfactual_cgan_femoral
+  classifier_ckpt: /home/doheon114/doheon114/meme_femoral/TinyUSFM/data/Cls/femoral/convnext_tbptt_best_384.pt
+  source_class_idx: 0     # ANISOTROPIC
+  target_class_idx: 2     # NERVE_VISIBLE
+  clf_autocast: true
+
+  ptb_based: true
+  temporal_bottleneck: true
+  vis_memory:             # space-time memory read over past VISIBLE frames at encoder levels 2, 3, 4
+    levels: [2, 3, 4]
+    key_dim: 64
+    pool: [[2, 2]]       # [level, factor] pairs
+    thresh: 0.5
+    align: true          # register context frames onto the current frame before reading (CoSpliced-style anchor alignment)
+  ema_decay: 0.99
+  gen_update_freq: 1
+  adv_loss: mse
+  lambda_adv: 1.0
+  lambda_cls: 2.0
+  lambda_keep: 1.0
+  lambda_rec: 5.0
+  lambda_tv: 0.05
+  lambda_ptb: 0.5
+  lambda_temp: 1.0
+  cyclic_rec: true
+
+  lr: 0.0002
+  b1: 0.0
+  b2: 0.999
+
+  enc_params:
+    downsample_scales: [2, 2, 2, 2, 2]
+    out_channels: [64, 128, 256, 512, 1024]
+  gen_params:
+    upsample_scales: [2, 2, 2, 2, 2]
+    out_channels: [1024, 512, 256, 128, 64]
+    upsample_kind: nearest
+    skip_conn: [1, 2, 3, 4]
+  disc_params:
+    downsample_scales: [2, 2, 2, 2, 2, 1]
+    out_channels: [64, 128, 256, 512, 1024, 1024]

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv*/
+training_logs/
+checkpoints/
+*.pth
+*.pt
+*.mp4
+data/
