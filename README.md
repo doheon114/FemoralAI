@@ -118,6 +118,15 @@ PYTHONPATH=$PWD python tools/infer_femoral_cf.py -r training_logs/femoral/<run_d
 - No quantitative comparison yet against a non-visible-frame-memory baseline beyond flip/keep/l1 metrics on
   a handful of held-out videos.
 
+## Second approach: `ansio_inpaint/` (anchor-windowed, enhance-only edit)
+
+An independent, lighter generator that predicts a small physically constrained brightening edit
+(gain / blur-mix at 1/8 resolution) inside one anchor window, adds texture from the most recent real
+`NERVE_VISIBLE` frame warped with fixed DIS optical flow, and is trained only through the same frozen video
+classifier. Snapshot of the run `a2v_sca_v4_tex_dis_enh_off0_g3_tgtin` (test: 0.752 of `ANISOTROPIC` frames
+flipped to `NERVE_VISIBLE`; already-visible frames P(vis) 0.651 → 0.708 with mean |ΔI| 0.003).
+See [`ansio_inpaint/README.md`](ansio_inpaint/README.md).
+
 ## Credit
 
 Counterfactual inpainting cGAN adapted from **COIN** (COunterfactual INpainting) — this repo is a
